@@ -1,0 +1,4 @@
+#!/usr/bin/env perl
+use App::Git::Sync;
+App::Git::Sync->new_with_options->run;
+

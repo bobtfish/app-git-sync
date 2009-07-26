@@ -7,7 +7,9 @@ all_from 'lib/App/Git/Sync.pm';
 
 license 'perl';
 
-requires 'Net::GitHub';
+install_script 'script/git-sync';
+
+requires 'Net::GitHub' => '0.18';
 test_requires 'Test::More';
 
 WriteAll;

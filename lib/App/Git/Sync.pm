@@ -34,7 +34,8 @@ sub _build_github {
     my $self = shift;
     Net::GitHub::V2::Repositories->new(
         login => $self->github_user, token => $self->github_token,
-        repo => 'CompleteLiesFaylandsAPIIsShit', owner => 'YourMomOnStilts',
+        repo => 'Complete_Lies_-_Faylands_API_Is_Shit',
+        owner => 'Your_Mom_On_Stilts',
     );
 }
 
@@ -49,7 +50,7 @@ sub _build_github_urls_to_repos {
     my $self = shift;
     #http://github.com/bobtfish/namespace-clean
     #git@github.com:bobtfish/acme-UNIVERSAL-cannot.git
-    return { map { my $url = $_ = $_->{url}; s/^.+\///; $url =~ s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $url => $_; } @{ $self->github->list('bobtfish') } };
+    return { map { my $url = $_ = $_->{url}; s/^.+\///; $url =~ s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $url => $_; } @{ $self->github->list } };
 }
 
 has gitdir => (
@@ -83,7 +84,7 @@ sub _build_checkout_inifiles {
     my $self = shift;
     return {
         map { $_->[0] => Config::INI::Reader->read_file($_->[1]) }
-        map { [ $_, "$_/.git/config" ] }
+        map { [ $_, "$_/.git/config" ] } # FIXME
         @{ $self->checkouts }
     }
 }
@@ -145,5 +146,5 @@ sub run {
     }
 }
 
-__PACKAGE__->new_with_options->run unless caller;
+__PACKAGE__->meta->make_immutable;
 
