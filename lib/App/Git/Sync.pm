@@ -148,3 +148,47 @@ sub run {
 
 __PACKAGE__->meta->make_immutable;
 
+=head1 NAME
+
+App::Git::Sync
+
+=head1 SYNOPSIS
+
+    git config --global github.user <youruser>
+    git config --global github.token <yourtoken from github.com/account>
+    git-sync --gitdir /home/t0m/code/git
+
+=head1 DESCRIPTION
+
+C<git-sync> is a simple script to keep all of your checkouts up to date.
+
+When run, it will clone any new github repositories (which are not cloned
+somewhere within C<--gitdir>, and then will fetch all remotes in all cloned
+repositories (except repositories which were just cloned for the first time.
+
+=head1 TODO
+
+=over
+
+=item Use git config to store git dir
+
+=item Factor out github code, so that you can have multiple git services to clone all of (e.g. Catgit / Moose git)
+
+=item Explore github network, so you automatically clone forks
+
+=item Ability to automatically mirror out into alternate repositories
+
+=item Generally make it suck less than a quick hack I wrote on the train.
+
+=back
+
+=head1 AUTHOR
+
+Tomas Doran (t0m) C<< <bobtfish@bobtfish.net >>
+
+=head1 LICENSE
+
+Copyright 2009 Tomas Doran, some rights reserved.
+
+This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+

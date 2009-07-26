@@ -16,4 +16,10 @@ requires 'MooseX::Types::Path::Class';
 requires 'Config::INI::Reader';
 test_requires 'Test::More';
 
+if ($Module::Install::AUTHOR) {
+    system("pod2text lib/App/Git/Sync.pm > README")
+        and die;
+}
+
 WriteAll;
+

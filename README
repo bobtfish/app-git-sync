@@ -1,0 +1,33 @@
+NAME
+    App::Git::Sync
+
+SYNOPSIS
+        git config --global github.user <youruser>
+        git config --global github.token <yourtoken from github.com/account>
+        git-sync --gitdir /home/t0m/code/git
+
+DESCRIPTION
+    "git-sync" is a simple script to keep all of your checkouts up to date.
+
+    When run, it will clone any new github repositories (which are not
+    cloned somewhere within "--gitdir", and then will fetch all remotes in
+    all cloned repositories (except repositories which were just cloned for
+    the first time.
+
+TODO
+    Use git config to store git dir
+    Factor out github code, so that you can have multiple git services to
+    clone all of (e.g. Catgit / Moose git)
+    Explore github network, so you automatically clone forks
+    Ability to automatically mirror out into alternate repositories
+    Generally make it suck less than a quick hack I wrote on the train.
+
+AUTHOR
+    Tomas Doran (t0m) "<bobtfish@bobtfish.net"
+
+LICENSE
+    Copyright 2009 Tomas Doran, some rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
