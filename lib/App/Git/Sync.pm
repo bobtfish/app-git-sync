@@ -50,7 +50,7 @@ sub _build_github_urls_to_repos {
     my $self = shift;
     #http://github.com/bobtfish/namespace-clean
     #git@github.com:bobtfish/acme-UNIVERSAL-cannot.git
-    return { map { my $url = $_ = $_->{url}; s/^.+\///; $url =~ s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $url => $_; } @{ $self->github->list } };
+    return { map { my $url = $_ = $_->{url}; s/^.+\///; $url =~ s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $url => $_; } @{ $self->github->list($self->github_user) } };
 }
 
 has gitdir => (
