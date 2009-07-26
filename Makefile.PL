@@ -10,6 +10,10 @@ license 'perl';
 install_script 'script/git-sync';
 
 requires 'Net::GitHub' => '0.18';
+requires 'Moose';
+requires 'MooseX::Getopt';
+requires 'MooseX::Types::Path::Class';
+requires 'Config::INI::Reader';
 test_requires 'Test::More';
 
 WriteAll;
