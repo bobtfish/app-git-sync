@@ -58,7 +58,6 @@ has gitdir => (
     isa => 'Path::Class::Dir',
     required => 1,
     coerce   => 1,
-    default => "/home/t0m/code/git",
 );
 
 has checkouts => (
@@ -85,6 +84,7 @@ sub _build_checkout_inifiles {
     return {
         map { $_->[0] => Config::INI::Reader->read_file($_->[1]) }
         map { [ $_, "$_/.git/config" ] } # FIXME
+        grep { -r "$_/.git/config" ? 1 : do { warn("$_ does not appear to be a git repository"); 0 } }
         @{ $self->checkouts }
     }
 }
