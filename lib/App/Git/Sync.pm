@@ -1,4 +1,4 @@
-package App::GitHubSync;
+package App::Git::Sync;
 use Moose;
 use Net::GitHub::V2::Repositories;
 use Data::Dumper;
