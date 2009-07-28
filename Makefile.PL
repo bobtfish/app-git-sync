@@ -14,6 +14,8 @@ requires 'Moose';
 requires 'MooseX::Getopt';
 requires 'MooseX::Types::Path::Class';
 requires 'Config::INI::Reader';
+requires 'namespace::autoclean';
+
 test_requires 'Test::More';
 
 if ($Module::Install::AUTHOR) {
