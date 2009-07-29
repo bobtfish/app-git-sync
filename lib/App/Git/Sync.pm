@@ -36,7 +36,7 @@ sub _build__github_repositories {
     Net::GitHub::V2::Repositories->new(
         login => $self->github_user, token => $self->github_token,
         repo => 'Ugh',
-        owner => 'NeedTheseParams',
+        owner => $self->github_user,
     );
 }
 
@@ -51,7 +51,7 @@ sub _build_github_urls_to_repos {
     my $self = shift;
     #http://github.com/bobtfish/namespace-clean
     #git@github.com:bobtfish/acme-UNIVERSAL-cannot.git
-    return { map { my $url = $_ = $_->{url}; s/^.+\///; $url =~ s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $url => $_; } @{ $self->github_list_user_repositories($self->github_user) } };
+    return { map { my $url = $_ = $_->{url}; s/^.+\///; $url =~ s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $url => $_; } @{ $self->github_list_user_repositories } };
 }
 
 has gitdir => (
