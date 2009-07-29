@@ -23,19 +23,20 @@ foreach my $name (qw/ user token /) {
     });
 }
 
-has github => (
+has _github_repositories => (
     isa => 'Net::GitHub::V2::Repositories',
     lazy_build => 1,
-    is => 'ro',
+    is => 'bare',
+    handles => { github_list_user_repositories => 'list' },
     traits => [qw/ NoGetopt /],
 );
 
-sub _build_github {
+sub _build__github_repositories {
     my $self = shift;
     Net::GitHub::V2::Repositories->new(
         login => $self->github_user, token => $self->github_token,
-        repo => 'Complete_Lies_-_Faylands_API_Is_Shit',
-        owner => 'Your_Mom_On_Stilts',
+        repo => 'Ugh',
+        owner => 'NeedTheseParams',
     );
 }
 
@@ -50,7 +51,7 @@ sub _build_github_urls_to_repos {
     my $self = shift;
     #http://github.com/bobtfish/namespace-clean
     #git@github.com:bobtfish/acme-UNIVERSAL-cannot.git
-    return { map { my $url = $_ = $_->{url}; s/^.+\///; $url =~ s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $url => $_; } @{ $self->github->list($self->github_user) } };
+    return { map { my $url = $_ = $_->{url}; s/^.+\///; $url =~ s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $url => $_; } @{ $self->github_list_user_repositories($self->github_user) } };
 }
 
 has gitdir => (
