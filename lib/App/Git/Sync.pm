@@ -10,6 +10,8 @@ use Config::INI::Reader;
 use List::MoreUtils qw/ any /;
 use namespace::autoclean;
 
+our $VERSION = '0.001';
+
 # Yes, this is flagrantly a script, even though it's a class.
 # No OO to be found here, sue me.
 
