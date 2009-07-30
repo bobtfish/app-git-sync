@@ -7,7 +7,11 @@ use FindBin qw/$Bin/;
 use MooseX::Types::Moose qw/ ArrayRef HashRef Str Bool /;
 use MooseX::Types::Path::Class;
 use Config::INI::Reader;
+use List::MoreUtils qw/ any /;
 use namespace::autoclean;
+
+# Yes, this is flagrantly a script, even though it's a class.
+# No OO to be found here, sue me.
 
 with 'MooseX::Getopt';
 
@@ -52,37 +56,20 @@ sub _build__github_repositories {
     $self->$get_net_github_repos();
 }
 
-has github_networks => (
-    is => 'ro',
-    isa => HashRef[ArrayRef[HashRef]],
-    lazy_build => 1,
-    traits => [qw/ NoGetopt /],
-);
+sub get_github_network {
+    my ($self, $name) = @_;
 
-sub _build_github_networks {
-    my $self = shift;
-    my $return = {};
-
-    print STDERR "Building networks\n" if $self->verbose;
-
-    foreach my $repos_data ( $self->github_list_user_repositories->flatten ) {
-        my $name = $repos_data->{name};
-        print STDERR "\t$name\n" if $self->verbose;
-        my $repos = $self->$get_net_github_repos($name);
-        my @forks;
-        warn Dumper $repos->network;
-        foreach my $member ($repos->network->flatten) {
-            if (!ref($member)) {
-                warn("Got non ref member '$member' for $name");
-                next;
-            }
-            next if $member->{owner} eq $self->github_user;
-            warn Dumper $self->github_show_user_repository($member->{owner}, $member->{name});
-            push(@forks, $member);
+    my $repos = $self->$get_net_github_repos($name);
+    my @forks;
+    foreach my $member ($repos->network->flatten) {
+        if (!ref($member)) {
+            warn("Got non ref member '$member' for $name");
+            next;
         }
-        $return->{$name} = \@forks
+        next if $member->{owner} eq $self->github_user;
+        push(@forks, $member);
     }
-    return $return;
+    return \@forks;
 }
 
 has github_urls_to_repos => (
@@ -97,7 +84,7 @@ my $munge_to_auth = sub { local $_ = shift;
 };
 
 my $munge_to_anon = sub { local $_ = shift;
-    s/http:\/\/github\.com\/(\w+)\/(.+)$/git:\/\/github.com:$1\/$2.git/ or die; $_;
+    s/http:\/\/github\.com\/(\w+)\/(.+)$/git:\/\/github.com\/$1\/$2.git/ or die; $_;
 };
 
 my $uri_to_repos = sub { local $_ = shift;
@@ -186,7 +173,7 @@ sub _build_remotes_list {
 
 sub run {
     my $self = shift;
-    my $github_repos = $self->github_urls_to_repos;
+    my $github_repos = { %{ $self->github_urls_to_repos } };
     foreach my $remote (@{ $self->remotes_list }) {
         delete $github_repos->{$remote};
     }
@@ -202,6 +189,19 @@ sub run {
             next CHECKOUT if $github_repos->{$remote};
             warn("Fetching $remote into $checkout\n");
             system("git fetch $remote") and die $!;
+        }
+
+        my $repos_name = $self->github_urls_to_repos->{$remotes->{origin}};
+        my @remote_uris = values %{ $remotes };
+        foreach my $network_member ($self->get_github_network($repos_name)->flatten) {
+            my $remote_name = $network_member->{owner};
+            my ($anon_uri, $auth_uri) = map { $_->($network_member->{url}) } ($munge_to_anon, $munge_to_auth);
+            next if any { $_ eq $anon_uri or $_ eq $auth_uri } @remote_uris;
+            warn("Added remote for $remote_name\n");
+            system("git remote add $remote_name $anon_uri")
+                and die $!;
+            system("git fetch $remote_name")
+                and die $!;
         }
     }
 }
@@ -222,9 +222,13 @@ App::Git::Sync
 
 C<git-sync> is a simple script to keep all of your checkouts up to date.
 
-When run, it will clone any new github repositories (which are not cloned
-somewhere within C<--gitdir>, and then will fetch all remotes in all cloned
-repositories (except repositories which were just cloned for the first time.
+It will work through every repository which you have in your git dir,
+and if that repository exists on github, then its network will be looked up,
+any remotes which you haven't got added will be added, and all your remotes
+will be fetched.
+
+Any repositories which you have on github that are not checked out locally
+will be cloned (and then remotes will be added and fetched).
 
 =head1 TODO
 
@@ -233,8 +237,6 @@ repositories (except repositories which were just cloned for the first time.
 =item Use git config to store git dir
 
 =item Factor out github code, so that you can have multiple git services to clone all of (e.g. Catgit / Moose git)
-
-=item Explore github network, so you automatically clone forks
 
 =item Ability to automatically mirror out into alternate repositories
 

@@ -16,6 +16,7 @@ requires 'Moose::Autobox';
 requires 'MooseX::Types';
 requires 'MooseX::Types::Path::Class';
 requires 'Config::INI::Reader';
+requires 'List::MoreUtils';
 requires 'namespace::autoclean';
 
 test_requires 'Test::More';
