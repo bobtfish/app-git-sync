@@ -1,17 +1,21 @@
 package App::Git::Sync;
 use Moose;
+use Moose::Autobox;
 use Net::GitHub::V2::Repositories;
 use Data::Dumper;
 use FindBin qw/$Bin/;
+use MooseX::Types::Moose qw/ ArrayRef HashRef Str Bool /;
 use MooseX::Types::Path::Class;
 use Config::INI::Reader;
 use namespace::autoclean;
 
 with 'MooseX::Getopt';
 
+has verbose => ( is => 'ro', isa => Bool, default => 0 );
+
 foreach my $name (qw/ user token /) {
     has "github_$name" => (
-        isa => 'Str',
+        isa => Str,
         lazy_build => 1,
         is => 'ro',
     );
@@ -27,31 +31,86 @@ has _github_repositories => (
     isa => 'Net::GitHub::V2::Repositories',
     lazy_build => 1,
     is => 'bare',
-    handles => { github_list_user_repositories => 'list' },
+    handles => {
+        github_list_user_repositories => 'list',
+        github_show_user_repository => 'show',
+     },
     traits => [qw/ NoGetopt /],
 );
 
-sub _build__github_repositories {
+my $get_net_github_repos = sub {
     my $self = shift;
     Net::GitHub::V2::Repositories->new(
         login => $self->github_user, token => $self->github_token,
-        repo => 'Ugh',
+        repo => (shift || 'RequiredButCanBeAnything'),
         owner => $self->github_user,
     );
+};
+
+sub _build__github_repositories {
+    my $self = shift;
+    $self->$get_net_github_repos();
+}
+
+has github_networks => (
+    is => 'ro',
+    isa => HashRef[ArrayRef[HashRef]],
+    lazy_build => 1,
+    traits => [qw/ NoGetopt /],
+);
+
+sub _build_github_networks {
+    my $self = shift;
+    my $return = {};
+
+    print STDERR "Building networks\n" if $self->verbose;
+
+    foreach my $repos_data ( $self->github_list_user_repositories->flatten ) {
+        my $name = $repos_data->{name};
+        print STDERR "\t$name\n" if $self->verbose;
+        my $repos = $self->$get_net_github_repos($name);
+        my @forks;
+        warn Dumper $repos->network;
+        foreach my $member ($repos->network->flatten) {
+            if (!ref($member)) {
+                warn("Got non ref member '$member' for $name");
+                next;
+            }
+            next if $member->{owner} eq $self->github_user;
+            warn Dumper $self->github_show_user_repository($member->{owner}, $member->{name});
+            push(@forks, $member);
+        }
+        $return->{$name} = \@forks
+    }
+    return $return;
 }
 
 has github_urls_to_repos => (
-    isa => 'HashRef[Str]',
+    isa => HashRef[Str],
     lazy_build => 1,
     is => 'ro',
     traits => [qw/NoGetopt /],
 );
 
+my $munge_to_auth = sub { local $_ = shift;
+    s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $_;
+};
+
+my $munge_to_anon = sub { local $_ = shift;
+    s/http:\/\/github\.com\/(\w+)\/(.+)$/git:\/\/github.com:$1\/$2.git/ or die; $_;
+};
+
+my $uri_to_repos = sub { local $_ = shift;
+    s/^.+\/// or die; $_;
+};
+
 sub _build_github_urls_to_repos {
     my $self = shift;
-    #http://github.com/bobtfish/namespace-clean
-    #git@github.com:bobtfish/acme-UNIVERSAL-cannot.git
-    return { map { my $url = $_ = $_->{url}; s/^.+\///; $url =~ s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $url => $_; } @{ $self->github_list_user_repositories } };
+    return {
+        map { $_->$munge_to_auth() => $_->$uri_to_repos }
+        map { $_->{url} }
+        $self->github_list_user_repositories->flatten
+    };
 }
 
 has gitdir => (
@@ -63,7 +122,7 @@ has gitdir => (
 
 has checkouts => (
     is => 'ro',
-    isa => 'ArrayRef[Path::Class::Dir]',
+    isa => ArrayRef['Path::Class::Dir'],
     lazy_build => 1,
     traits => [qw/ NoGetopt /],
 );
@@ -75,7 +134,7 @@ sub _build_checkouts {
 
 has checkout_inifiles => (
     is => 'ro',
-    isa => 'HashRef',
+    isa => HashRef,
     lazy_build => 1,
     traits => [qw/ NoGetopt /],
 );
@@ -92,7 +151,7 @@ sub _build_checkout_inifiles {
 
 has checkout_remotes => (
     is => 'ro',
-    isa => 'HashRef',
+    isa => HashRef,
     lazy_build => 1,
     traits => [qw/ NoGetopt /],
 );
@@ -115,7 +174,7 @@ sub _build_checkout_remotes {
 }
 
 has remotes_list => (
-    isa => 'ArrayRef[Str]',
+    isa => ArrayRef[Str],
     is => 'ro',
     lazy_build => 1,
 );
