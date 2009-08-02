@@ -107,7 +107,15 @@ has gitdir => (
     isa => 'Path::Class::Dir',
     required => 1,
     coerce   => 1,
+    lazy_build => 1,
 );
+
+sub _build_gitdir  {
+    my $val = `git config --global sync.dir`;
+    chomp($val);
+    die("Sync dir not set in git, say: git config --global sync.dir /home/me/code/git or pass a --gitdir parameter\n")
+            unless $val;
+}
 
 has checkouts => (
     is => 'ro',
