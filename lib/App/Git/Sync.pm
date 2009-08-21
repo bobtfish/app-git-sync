@@ -201,7 +201,13 @@ sub run {
             system("git fetch $remote") and die $!;
         }
 
-        my $repos_name = $self->github_urls_to_repos->{$remotes->{origin}};
+        my $origin = $remotes->{origin} || warn("No origin remote " . Dumper($remotes));
+        next unless $origin;
+        my $repos_name = $self->github_urls_to_repos->{$origin};
+        unless ($repos_name) {
+            warn("No repos name");
+            next;
+        }
         my @remote_uris = values %{ $remotes };
         foreach my $network_member ($self->get_github_network($repos_name)->flatten) {
             my $remote_name = $network_member->{owner};
