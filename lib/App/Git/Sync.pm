@@ -198,7 +198,8 @@ sub run {
         foreach my $remote (keys %{ $remotes }) {
             next CHECKOUT if $github_repos->{$remote};
             warn("Fetching $remote into $checkout\n");
-            system("git fetch $remote") and die $!;
+            # FIXME - Deal with deleted repos by capturing output and parsing..
+            system("git fetch $remote") and warn $!;
         }
 
         my $origin = $remotes->{origin} || warn("No origin remote " . Dumper($remotes));
