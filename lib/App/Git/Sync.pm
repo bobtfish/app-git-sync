@@ -82,11 +82,11 @@ has github_urls_to_repos => (
 );
 
 my $munge_to_auth = sub { local $_ = shift;
-    s/http:\/\/github\.com\/(\w+)\/(.+)$/git\@github.com:$1\/$2.git/ or die; $_;
+    s/http:\/\/github\.com\/([\w-]+)\/(.+)$/git\@github.com:$1\/$2.git/ or die("Could not munge_to_auth: $_"); $_;
 };
 
 my $munge_to_anon = sub { local $_ = shift;
-    s/http:\/\/github\.com\/(\w+)\/(.+)$/git:\/\/github.com\/$1\/$2.git/ or die; $_;
+    s/http:\/\/github\.com\/([\w-]+)\/(.+)$/git:\/\/github.com\/$1\/$2.git/ or die("Could not munge_to_anon: $_"); $_;
 };
 
 my $uri_to_repos = sub { local $_ = shift;
