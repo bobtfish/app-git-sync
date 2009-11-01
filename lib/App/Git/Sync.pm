@@ -192,7 +192,7 @@ sub run {
     chdir $self->gitdir or die $!;
     foreach my $remote (keys %{ $github_repos }) {
         warn("Cloning " . $github_repos->{$remote} . " ($remote)\n");
-        system("git clone $remote") and die $!;
+        system("git clone $remote") and warn $!;
     }
     CHECKOUT: foreach my $checkout (keys %{ $self->checkout_remotes }) {
         my $remotes = $self->checkout_remotes->{$checkout};
