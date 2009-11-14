@@ -6,8 +6,9 @@ use Data::Dumper;
 use FindBin qw/$Bin/;
 use MooseX::Types::Moose qw/ ArrayRef HashRef Str Bool /;
 use MooseX::Types::Path::Class;
-use Config::INI::Reader;
+use aliased 'App::Git::Sync::Repos';
 use List::MoreUtils qw/ any /;
+use App::Git::Sync::Types qw/ProjectGatherer/;
 use namespace::autoclean;
 
 our $VERSION = '0.001';
@@ -126,7 +127,24 @@ has checkouts => (
 
 sub _build_checkouts {
     my $self = shift;
-    [ grep { $_->isa('Path::Class::Dir') } $self->gitdir->children ];
+    [
+        grep { -r $_->file('.git', 'config') }
+        grep { $_->isa('Path::Class::Dir') } $self->gitdir->children
+    ];
+}
+
+has remotes => (
+    is => 'ro',
+    isa => ArrayRef[Repos],
+    lazy_build => 1,
+    traits => [qw/ NoGetopt /],
+);
+
+sub _build_remotes {
+    my $self = shift;
+    return [
+        map { Repos->new(gitdir => $self->gitdir, name => $_->as_string) } $self->checkouts->flatten
+    ];
 }
 
 has checkout_inifiles => (
@@ -181,13 +199,23 @@ sub _build_remotes_list {
     [ map { values %$_ } values %{$self->checkout_remotes} ];
 }
 
+use App::Git::Sync::ProjectGatherer::Github;
+use App::Git::Sync::ProjectGatherer::LocalDisk;
+has _project_gatherers => ( isa => ArrayRef[ProjectGatherer], is => 'ro', default => sub {
+    my $self = shift;
+    [
+        App::Git::Sync::ProjectGatherer::Github->new({ gitdir => $self->gitdir }),
+        App::Git::Sync::ProjectGatherer::LocalDisk->new({ gitdir => $self->gitdir }),
+    ]
+} );
+
 sub run {
     my $self = shift;
+    chdir $self->gitdir or die $!;
     my $github_repos = { %{ $self->github_urls_to_repos } };
     foreach my $remote (@{ $self->remotes_list }) {
         delete $github_repos->{$remote};
     }
-    chdir $self->gitdir or die $!;
     foreach my $remote (keys %{ $github_repos }) {
         warn("Cloning " . $github_repos->{$remote} . " ($remote)\n");
         system("git clone $remote") and die $!;

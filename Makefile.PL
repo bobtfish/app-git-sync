@@ -18,8 +18,10 @@ requires 'MooseX::Types::Path::Class';
 requires 'Config::INI::Reader';
 requires 'List::MoreUtils';
 requires 'namespace::autoclean';
+requires 'aliased';
 
-test_requires 'Test::More';
+test_requires 'Test::More' -> '0.88';
+test_requires 'Test::Exception';
 
 if ($Module::Install::AUTHOR) {
     system("pod2text lib/App/Git/Sync.pm > README")
