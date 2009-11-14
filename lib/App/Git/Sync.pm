@@ -133,14 +133,14 @@ sub _build_checkouts {
     ];
 }
 
-has remotes => (
+has projects => (
     is => 'ro',
     isa => ArrayRef[Repos],
     lazy_build => 1,
     traits => [qw/ NoGetopt /],
 );
 
-sub _build_remotes {
+sub _build_projects {
     my $self = shift;
     return [
         map { Repos->new(gitdir => $self->gitdir, name => $_->relative($self->gitdir)->stringify) } $self->checkouts->flatten
@@ -212,7 +212,7 @@ has _project_gatherers => ( isa => ArrayRef[ProjectGatherer], is => 'ro', defaul
 sub run {
     my $self = shift;
     chdir $self->gitdir or die $!;
-    $self->remotes;
+    $self->projects;
     my $github_repos = { %{ $self->github_urls_to_repos } };
     foreach my $remote (@{ $self->remotes_list }) {
         delete $github_repos->{$remote};
@@ -221,12 +221,12 @@ sub run {
         warn("Cloning " . $github_repos->{$remote} . " ($remote)\n");
         system("git clone $remote") and die $!;
     }
-    CHECKOUT: foreach my $checkout (keys %{ $self->checkout_remotes }) {
-        my $remotes = $self->checkout_remotes->{$checkout};
-        chdir($checkout) or die("$! for $checkout");
+    CHECKOUT: foreach my $repos ($self->projects->flatten) {
+        my $remotes = $repos->remotes;
+        chdir($repos->directory) or die("$! for " . $repos->name);
         foreach my $remote (keys %{ $remotes }) {
             next CHECKOUT if $github_repos->{$remote};
-            warn("Fetching $remote into $checkout\n");
+            warn("Fetching $remote into " . $repos->name . "\n");
             # FIXME - Deal with deleted repos by capturing output and parsing..
             system("git fetch $remote") and warn $!;
         }

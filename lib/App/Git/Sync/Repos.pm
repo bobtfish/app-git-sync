@@ -10,6 +10,11 @@ use namespace::autoclean;
 has _gitdir => ( isa => Dir, is => 'ro', required => 1, init_arg => 'gitdir', coerce => 1 );
 has name => ( isa => NonEmptySimpleStr, is => 'ro', required => 1 );
 
+sub directory {
+    my $self = shift;
+    $self->_gitdir->subdir($self->name);
+}
+
 has _inifile => (
     is => 'ro',
     isa => HashRef,
