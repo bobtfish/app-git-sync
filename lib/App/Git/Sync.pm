@@ -196,7 +196,7 @@ has remotes_list => (
 
 sub _build_remotes_list {
     my $self = shift;
-    [ map { values %$_ } values %{$self->checkout_remotes} ];
+    [ map { $_->remote_uris } $self->projects->flatten ];
 }
 
 use App::Git::Sync::ProjectGatherer::Github;
