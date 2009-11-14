@@ -147,47 +147,6 @@ sub _build_projects {
     ];
 }
 
-has checkout_inifiles => (
-    is => 'ro',
-    isa => HashRef,
-    lazy_build => 1,
-    traits => [qw/ NoGetopt /],
-);
-
-sub _build_checkout_inifiles {
-    my $self = shift;
-    return {
-        map { $_->[0] => Config::INI::Reader->read_file($_->[1]) }
-        map { [ $_, "$_/.git/config" ] } # FIXME
-        grep { -r "$_/.git/config" ? 1 : do { warn("$_ does not appear to be a git repository"); 0 } }
-        @{ $self->checkouts }
-    }
-}
-
-has checkout_remotes => (
-    is => 'ro',
-    isa => HashRef,
-    lazy_build => 1,
-    traits => [qw/ NoGetopt /],
-);
-
-sub _build_checkout_remotes {
-    my $self = shift;
-    my $out = {};
-    foreach my $checkout (keys %{$self->checkout_inifiles}) {
-        $out->{$checkout} ||= {};
-        my @remote_keys =
-            map { /"(.+)"/ or die; $1 }
-            grep { /^remote/ }
-            keys %{ $self->checkout_inifiles->{$checkout} };
-        foreach my $key (@remote_keys) {
-            $out->{$checkout}->{$key}
-                = $self->checkout_inifiles->{$checkout}->{"remote \"$key\""}->{url};
-        }
-    }
-    return $out;
-}
-
 has remotes_list => (
     isa => ArrayRef[Str],
     is => 'ro',
