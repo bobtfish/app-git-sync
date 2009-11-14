@@ -118,14 +118,14 @@ sub _build_gitdir  {
             unless $val;
 }
 
-has checkouts => (
+has _repos_dirs => (
     is => 'ro',
     isa => ArrayRef['Path::Class::Dir'],
-    lazy_build => 1,
-    traits => [qw/ NoGetopt /],
+    lazy => 1,
+    builder => '_build_repos_dirs',
 );
 
-sub _build_checkouts {
+sub _build_repos_dirs {
     my $self = shift;
     [
         grep { -r $_->file('.git', 'config') }
@@ -143,7 +143,7 @@ has projects => (
 sub _build_projects {
     my $self = shift;
     return [
-        map { Repos->new(gitdir => $self->gitdir, name => $_->relative($self->gitdir)->stringify) } $self->checkouts->flatten
+        map { Repos->new(gitdir => $self->gitdir, name => $_->relative($self->gitdir)->stringify) } $self->_repos_dirs->flatten
     ];
 }
 
@@ -225,7 +225,7 @@ App::Git::Sync
 
 =head1 DESCRIPTION
 
-C<git-sync> is a simple script to keep all of your checkouts up to date.
+C<git-sync> is a simple script to keep all of your repositories up to date.
 
 It will work through every repository which you have in your git dir,
 and if that repository exists on github, then its network will be looked up,
