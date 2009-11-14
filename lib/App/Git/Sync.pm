@@ -143,7 +143,7 @@ has remotes => (
 sub _build_remotes {
     my $self = shift;
     return [
-        map { Repos->new(gitdir => $self->gitdir, name => $_->as_string) } $self->checkouts->flatten
+        map { Repos->new(gitdir => $self->gitdir, name => $_->relative($self->gitdir)->stringify) } $self->checkouts->flatten
     ];
 }
 
@@ -212,6 +212,7 @@ has _project_gatherers => ( isa => ArrayRef[ProjectGatherer], is => 'ro', defaul
 sub run {
     my $self = shift;
     chdir $self->gitdir or die $!;
+    $self->remotes;
     my $github_repos = { %{ $self->github_urls_to_repos } };
     foreach my $remote (@{ $self->remotes_list }) {
         delete $github_repos->{$remote};
