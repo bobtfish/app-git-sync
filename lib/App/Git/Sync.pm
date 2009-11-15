@@ -34,75 +34,6 @@ foreach my $name (qw/ user token /) {
     });
 }
 
-has _github_repositories => (
-    isa => 'Net::GitHub::V2::Repositories',
-    lazy_build => 1,
-    is => 'bare',
-    handles => {
-        github_list_user_repositories => 'list',
-        github_show_user_repository => 'show',
-     },
-    traits => [qw/ NoGetopt /],
-);
-
-my $get_net_github_repos = sub {
-    my $self = shift;
-    Net::GitHub::V2::Repositories->new(
-        login => $self->github_user, token => $self->github_token,
-        repo => (shift || 'RequiredButCanBeAnything'),
-        owner => $self->github_user,
-    );
-};
-
-sub _build__github_repositories {
-    my $self = shift;
-    $self->$get_net_github_repos();
-}
-
-sub get_github_network {
-    my ($self, $name) = @_;
-
-    my $repos = $self->$get_net_github_repos($name);
-    my @forks;
-    foreach my $member ($repos->network->flatten) {
-        if (!ref($member)) {
-            warn("Got non ref member '$member' for $name");
-            next;
-        }
-        next if $member->{owner} eq $self->github_user;
-        push(@forks, $member);
-    }
-    return \@forks;
-}
-
-has github_urls_to_repos => (
-    isa => HashRef[Str],
-    lazy_build => 1,
-    is => 'ro',
-    traits => [qw/NoGetopt /],
-);
-
-my $munge_to_auth = sub { local $_ = shift;
-    s/http:\/\/github\.com\/([\w-]+)\/(.+)$/git\@github.com:$1\/$2.git/ or die("Could not munge_to_auth: $_"); $_;
-};
-
-my $munge_to_anon = sub { local $_ = shift;
-    s/http:\/\/github\.com\/([\w-]+)\/(.+)$/git:\/\/github.com\/$1\/$2.git/ or die("Could not munge_to_anon: $_"); $_;
-};
-
-my $uri_to_repos = sub { local $_ = shift;
-    s/^.+\/// or die; $_;
-};
-
-sub _build_github_urls_to_repos {
-    my $self = shift;
-    return {
-        map { $_->$munge_to_auth() => $_->$uri_to_repos }
-        map { $_->{url} }
-        $self->github_list_user_repositories->flatten
-    };
-}
-
 has gitdir => (
     is => 'ro',
     isa => 'Path::Class::Dir',
@@ -160,13 +91,33 @@ sub _build_remotes_list {
 
 use App::Git::Sync::ProjectGatherer::Github;
 use App::Git::Sync::ProjectGatherer::LocalDisk;
-has _project_gatherers => ( isa => ArrayRef[ProjectGatherer], is => 'ro', default => sub {
+
+has _github_gatherer => ( isa => 'App::Git::Sync::ProjectGatherer::Github', is => 'ro',
+    default => sub {
+        my $self = shift;
+        App::Git::Sync::ProjectGatherer::Github->new({ gitdir => $self->gitdir, user => $self->github_user, token => $self->github_token });
+    },
+    handles => {
+        map { 'github_' . $_ => $_ }
+        qw/urls_to_repos get_network/
+    },
+);
+
+has _project_gatherers => ( isa => ArrayRef[ProjectGatherer], is => 'ro', lazy => 1, default => sub {
     my $self = shift;
     [
-        App::Git::Sync::ProjectGatherer::Github->new({ gitdir => $self->gitdir }),
+        $self->_github_gatherer,
         App::Git::Sync::ProjectGatherer::LocalDisk->new({ gitdir => $self->gitdir }),
     ]
 } );
+
+my $munge_to_auth = sub { local $_ = shift;
+    s/http:\/\/github\.com\/([\w-]+)\/(.+)$/git\@github.com:$1\/$2.git/ or die("Could not munge_to_auth: $_"); $_;
+};
+
+my $munge_to_anon = sub { local $_ = shift;
+    s/http:\/\/github\.com\/([\w-]+)\/(.+)$/git:\/\/github.com\/$1\/$2.git/ or die("Could not munge_to_anon: $_"); $_;
+};
 
 sub run {
     my $self = shift;
