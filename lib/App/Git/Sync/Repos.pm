@@ -1,5 +1,5 @@
 package App::Git::Sync::Repos;
-# ABSTRACT: Represents a git repository and its remotes
+# ABSTRACT: Represents an on-disk git repository and its remotes
 use Moose;
 use MooseX::Types::Common::String qw/NonEmptySimpleStr/;
 use MooseX::Types::Path::Class qw/Dir/;
@@ -7,8 +7,9 @@ use MooseX::Types::Moose qw/HashRef/;
 use Config::INI::Reader;
 use namespace::autoclean;
 
+with 'App::Git::Sync::SetOfRemotes';
+
 has _gitdir => ( isa => Dir, is => 'ro', required => 1, init_arg => 'gitdir', coerce => 1 );
-has name => ( isa => NonEmptySimpleStr, is => 'ro', required => 1 );
 
 sub directory {
     my $self = shift;
@@ -29,18 +30,7 @@ sub _build_inifile {
     Config::INI::Reader->read_file($fn);
 }
 
-has remotes => (
-    is => 'ro',
-    isa => HashRef,
-    builder => '_build_remotes',
-    lazy => 1,
-    traits => ['Hash'],
-    handles => {
-        remote_uris => 'values',
-    },
-);
-
-sub BUILD { my $self = shift; $self->$_ for qw/_inifile remotes/ }
+sub BUILD { shift->_inifile }
 
 sub _build_remotes {
     my $self = shift;

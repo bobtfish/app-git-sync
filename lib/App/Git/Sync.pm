@@ -111,6 +111,10 @@ has _project_gatherers => ( isa => ArrayRef[ProjectGatherer], is => 'ro', lazy =
     ]
 } );
 
+sub _gather_possible_projects {
+    [ map { $_->gather->flatten } shift->_project_gatherers->flatten ];
+}
+
 my $munge_to_auth = sub { local $_ = shift;
     s/http:\/\/github\.com\/([\w-]+)\/(.+)$/git\@github.com:$1\/$2.git/ or die("Could not munge_to_auth: $_"); $_;
 };
@@ -119,10 +123,19 @@ my $munge_to_anon = sub { local $_ = shift;
     s/http:\/\/github\.com\/([\w-]+)\/(.+)$/git:\/\/github.com\/$1\/$2.git/ or die("Could not munge_to_anon: $_"); $_;
 };
 
+# Gather list of projects currently held.
+# Gather all the interesting 'projects' from all sources
+# For each current project, work out if it wants to consume one (or more) of the interesting projects
+# For all interesting projects which are left, clone
+# For all the projects, do a fetch on all remotes.
+
 sub run {
     my $self = shift;
     chdir $self->gitdir or die $!;
-    $self->projects;
+    
+    my $local_projects = $self->projects;
+    my $all_possible_projects = $self->_gather_possible_projects;
+
     my $github_repos = { %{ $self->github_urls_to_repos } };
     foreach my $remote (@{ $self->remotes_list }) {
         delete $github_repos->{$remote};

@@ -3,6 +3,7 @@ use Moose;
 use Net::GitHub::V2::Repositories;
 use MooseX::Types::Common::String qw/NonEmptySimpleStr/;
 use MooseX::Types::Moose qw/HashRef Str/;
+use App::Git::Sync::GithubRepos;
 use namespace::autoclean;
 
 with 'App::Git::Sync::ProjectGatherer'; 
@@ -89,6 +90,11 @@ sub _build_urls_to_repos {
     };
 }
 
-sub gather {}
+sub gather {
+    my $self = shift;
+    my $uris_to_repos = $self->uris_to_repos;
+    [ map { App::Git::Sync::GithubRepos->new( name => $uris_to_repos->{$_}, remotes => { origin => $_ })} keys %$uris_to_repos ];
+    
+}
 
 __PACKAGE__->meta->make_immutable;
