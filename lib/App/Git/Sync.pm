@@ -5,7 +5,7 @@ use Net::GitHub::V2::Repositories;
 use Data::Dumper;
 use FindBin qw/$Bin/;
 use MooseX::Types::Moose qw/ ArrayRef HashRef Str Bool /;
-use MooseX::Types::Path::Class;
+use MooseX::Types::Path::Class qw/Dir/;
 use aliased 'App::Git::Sync::Repos';
 use List::MoreUtils qw/ any /;
 use App::Git::Sync::Types qw/ProjectGatherer/;
@@ -19,6 +19,21 @@ our $VERSION = '0.001';
 with 'MooseX::Getopt';
 
 has verbose => ( is => 'ro', isa => Bool, default => 0 );
+
+has gitdir => (
+    is => 'ro',
+    isa => Dir,
+    required => 1,
+    coerce   => 1,
+    lazy_build => 1,
+);
+
+sub _build_gitdir  {
+    my $val = `git config --global sync.dir`;
+    chomp($val);
+    die("Sync dir not set in git, say: git config --global sync.dir /home/me/code/git or pass a --gitdir parameter\n")
+            unless $val;
+}
 
 foreach my $name (qw/ user token /) {
     has "github_$name" => (
@@ -147,7 +162,7 @@ sub run {
             next;
         }
         my @remote_uris = values %{ $remotes };
-        foreach my $network_member ($self->get_github_network($repos_name)->flatten) {
+        foreach my $network_member ($self->github_get_network($repos_name)->flatten) {
             my $remote_name = $network_member->{owner};
             my ($anon_uri, $auth_uri) = map { $_->($network_member->{url}) } ($munge_to_anon, $munge_to_auth);
             next if any { $_ eq $anon_uri or $_ eq $auth_uri } @remote_uris;

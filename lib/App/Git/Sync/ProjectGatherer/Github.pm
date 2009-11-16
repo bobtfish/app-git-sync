@@ -4,6 +4,8 @@ use MooseX::Types::Common::String qw/NonEmptySimpleStr/;
 use MooseX::Types::Moose qw/HashRef Str Object/;
 use App::Git::Sync::GithubRepos;
 use Moose::Autobox;
+use Net::Github::V2;
+use Net::GitHub::V2::Repositories;
 use namespace::autoclean;
 
 with 'App::Git::Sync::ProjectGatherer'; 
@@ -42,13 +44,7 @@ my $get_net_github_repos = sub {
     );
 };
 
-has _github_client_class => ( isa => NonEmptySimpleStr, is => 'ro', default => 'Net::Github::V2::Repositories' );
-around _github_client_class => sub {
-    my ($orig, $self, @args) = @_;
-    my $class = $self->$orig(@args);
-    Class::MOP::load_class($class);
-    return $class;
-};
+has _github_client_class => ( isa => NonEmptySimpleStr, is => 'ro', default => 'Net::GitHub::V2::Repositories' );
 
 sub _build__repositories {
     my $self = shift;
