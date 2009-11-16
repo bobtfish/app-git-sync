@@ -87,10 +87,12 @@ my $uri_to_repos = sub { local $_ = shift;
 
 sub _build_urls_to_repos {
     my $self = shift;
+    my @list = $self->list_user_repositories->flatten;
+    die($list[1]) if $list[0] =~ /error/;
     return {
         map { $_->$munge_to_auth() => $_->$uri_to_repos }
         map { $_->{url} }
-        $self->list_user_repositories->flatten
+        @list
     };
 }
 
