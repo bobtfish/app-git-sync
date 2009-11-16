@@ -1,9 +1,9 @@
 package App::Git::Sync::ProjectGatherer::Github;
 use Moose;
-use Net::GitHub::V2::Repositories;
 use MooseX::Types::Common::String qw/NonEmptySimpleStr/;
-use MooseX::Types::Moose qw/HashRef Str/;
+use MooseX::Types::Moose qw/HashRef Str Object/;
 use App::Git::Sync::GithubRepos;
+use Moose::Autobox;
 use namespace::autoclean;
 
 with 'App::Git::Sync::ProjectGatherer'; 
@@ -24,7 +24,7 @@ foreach my $name (qw/ user token /) {
 
 
 has _repositories => (
-    isa => 'Net::GitHub::V2::Repositories',
+    isa => Object,
     lazy_build => 1,
     is => 'bare',
     handles => {
@@ -35,11 +35,19 @@ has _repositories => (
 
 my $get_net_github_repos = sub {
     my $self = shift;
-    Net::GitHub::V2::Repositories->new(
+    $self->_github_client_class->new(
         login => $self->user, token => $self->token,
         repo => (shift || 'RequiredButCanBeAnything'),
         owner => $self->user,
     );
+};
+
+has _github_client_class => ( isa => NonEmptySimpleStr, is => 'ro', default => 'Net::Github::V2::Repositories' );
+around _github_client_class => sub {
+    my ($orig, $self, @args) = @_;
+    my $class = $self->$orig(@args);
+    Class::MOP::load_class($class);
+    return $class;
 };
 
 sub _build__repositories {
@@ -92,9 +100,9 @@ sub _build_urls_to_repos {
 
 sub gather {
     my $self = shift;
-    my $uris_to_repos = $self->uris_to_repos;
-    [ map { App::Git::Sync::GithubRepos->new( name => $uris_to_repos->{$_}, remotes => { origin => $_ })} keys %$uris_to_repos ];
-    
+    my $urls_to_repos = $self->urls_to_repos;
+    [ map { App::Git::Sync::GithubRepos->new( name => $urls_to_repos->{$_}, remotes => { origin => $_ })} keys %$urls_to_repos ];
+
 }
 
 __PACKAGE__->meta->make_immutable;
