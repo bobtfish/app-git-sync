@@ -129,12 +129,36 @@ my $munge_to_anon = sub { local $_ = shift;
 # For all interesting projects which are left, clone
 # For all the projects, do a fetch on all remotes.
 
-sub run {
-    my $self = shift;
-    chdir $self->gitdir or die $!;
+sub _merge_local_projects_with_possible_projects_and_return_things_to_clone {
+    use Data::Dumper;
+    local $Data::Dumper = 2;
     
     my $local_projects = $self->projects;
     my $all_possible_projects = $self->_gather_possible_projects;
+    my @new_projects;
+    TOP: foreach my $project (@$all_possible_projects) {
+        foreach my $local_project (@$local_projects) {
+            if ($local_project->combine_repository_with($project)) {
+                next TOP;
+            }
+            else {
+                push(@new_projects, $project);
+            }
+        }
+    }
+    return \@new_projects;
+}
+
+sub run {
+    my $self = shift;
+    chdir $self->gitdir or die $!;
+
+    my @projects_to_clone = $self->_merge_local_projects_with_possible_projects_and_return_things_to_clone->flatten;
+
+    foreach my $project (@projects_to_clone) {
+        warn("Cloning " . $project->name . " (" . $project->remotes->{origin} . ")\n");
+        system(qw/git clone/, $project->remotes->{origin}) and die $!;
+    }
 
     my $github_repos = { %{ $self->github_urls_to_repos } };
     foreach my $remote (@{ $self->remotes_list }) {
