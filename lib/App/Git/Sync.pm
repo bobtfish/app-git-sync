@@ -8,6 +8,7 @@ use MooseX::Types::Moose qw/ ArrayRef HashRef Str Bool /;
 use MooseX::Types::Path::Class;
 use Config::INI::Reader;
 use List::MoreUtils qw/ any /;
+use Carp qw/ cluck confess /;
 use namespace::autoclean;
 
 our $VERSION = '0.001';
@@ -82,11 +83,15 @@ has github_urls_to_repos => (
 );
 
 my $munge_to_auth = sub { local $_ = shift;
-    s/http:\/\/github\.com\/\/?([\w-]+)\/(.+)$/git\@github.com:$1\/$2.git/ or die("Could not munge_to_auth: $_"); $_;
+    s/http:\/\/github\.com\/\/?([\w-]+)\/(.+)$/git\@github.com:$1\/$2.git/
+        ? $_
+        : do { cluck("Could not munge_to_auth: $_"); undef; };
 };
 
 my $munge_to_anon = sub { local $_ = shift;
-    s/http:\/\/github\.com\/\/?([\w-]+)\/(.+)$/git:\/\/github.com\/$1\/$2.git/ or die("Could not munge_to_anon: $_"); $_;
+    s/http:\/\/github\.com\/\/?([\w-]+)\/(.+)$/git:\/\/github.com\/$1\/$2.git/
+        ? $_
+        : do { cluck("Could not munge_to_anon: $_"); undef };
 };
 
 my $uri_to_repos = sub { local $_ = shift;
@@ -215,6 +220,7 @@ sub run {
         foreach my $network_member ($self->get_github_network($repos_name)->flatten) {
             my $remote_name = $network_member->{owner};
             my ($anon_uri, $auth_uri) = map { $_->($network_member->{url}) } ($munge_to_anon, $munge_to_auth);
+            next unless $anon_uri;
             next if any { $_ eq $anon_uri or $_ eq $auth_uri } @remote_uris;
             warn("Added remote for $remote_name\n");
             system("git remote add $remote_name $anon_uri")
