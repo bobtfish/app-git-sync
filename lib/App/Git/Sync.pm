@@ -157,7 +157,7 @@ sub run {
 
     foreach my $project (@projects_to_clone) {
         warn("Cloning " . $project->name . " (" . $project->remotes->{origin} . ")\n");
-        system(qw/git clone/, $project->remotes->{origin}) and die $!;
+        system(qw/git clone/, $project->remotes->{origin}) and warn $!;
     }
 
     my $github_repos = { %{ $self->github_urls_to_repos } };
@@ -166,7 +166,7 @@ sub run {
     }
     foreach my $remote (keys %{ $github_repos }) {
         warn("Cloning " . $github_repos->{$remote} . " ($remote)\n");
-        system("git clone $remote") and die $!;
+        system("git clone $remote") and warn $!;
     }
     CHECKOUT: foreach my $repos ($self->projects->flatten) {
         my $remotes = $repos->remotes;
@@ -192,9 +192,9 @@ sub run {
             next if any { $_ eq $anon_uri or $_ eq $auth_uri } @remote_uris;
             warn("Added remote for $remote_name\n");
             system("git remote add $remote_name $anon_uri")
-                and die $!;
+                and warn $!;
             system("git fetch $remote_name")
-                and die $!;
+                and warn $!;
         }
     }
 }
