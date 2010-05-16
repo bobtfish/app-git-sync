@@ -9,6 +9,7 @@ use MooseX::Types::Path::Class qw/Dir/;
 use aliased 'App::Git::Sync::Repos';
 use List::MoreUtils qw/ any /;
 use App::Git::Sync::Types qw/ProjectGatherer/;
+use Carp qw/ cluck confess /;
 use namespace::autoclean;
 
 our $VERSION = '0.001';
@@ -56,7 +57,27 @@ has _repos_dirs => (
     builder => '_build_repos_dirs',
 );
 
+<<<<<<< HEAD
 sub _build_repos_dirs {
+=======
+my $munge_to_auth = sub { local $_ = shift;
+    s/http:\/\/github\.com\/\/?([\w-]+)\/(.+)$/git\@github.com:$1\/$2.git/
+        ? $_
+        : do { cluck("Could not munge_to_auth: $_"); undef; };
+};
+
+my $munge_to_anon = sub { local $_ = shift;
+    s/http:\/\/github\.com\/\/?([\w-]+)\/(.+)$/git:\/\/github.com\/$1\/$2.git/
+        ? $_
+        : do { cluck("Could not munge_to_anon: $_"); undef };
+};
+
+my $uri_to_repos = sub { local $_ = shift;
+    s/^.+\/// or die; $_;
+};
+
+sub _build_github_urls_to_repos {
+>>>>>>> 8dd1a0eaa58158eb8ee6af07bce20f28e8a098ca
     my $self = shift;
     [
         grep { -r $_->file('.git', 'config') }
@@ -189,6 +210,7 @@ sub run {
         foreach my $network_member ($self->github_get_network($repos_name)->flatten) {
             my $remote_name = $network_member->{owner};
             my ($anon_uri, $auth_uri) = map { $_->($network_member->{url}) } ($munge_to_anon, $munge_to_auth);
+            next unless $anon_uri;
             next if any { $_ eq $anon_uri or $_ eq $auth_uri } @remote_uris;
             warn("Added remote for $remote_name\n");
             system("git remote add $remote_name $anon_uri")
